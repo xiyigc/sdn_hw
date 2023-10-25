@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>sdn_lab7_前端页面</title>
+	</head>
+	<body>
+		<h2 id="num">s1当前流表数:</h2>
+		<button id="btn0">查询流表数</button>
+		<h2>流表添加</h2>
+		<textarea id="flowAdd" style="width: 300px; height: 80px"></textarea>
+		<div style="display: flex">
+			<button style="width: 80px; height: 30px" id="btn1">添加</button>
+			<button style="width: 100px; height: 30px" id="btn3">删除所有流表</button>
+		</div>
+		<div
+			id="flowContent"
+			style="
+				background-color: #efefef;
+				width: 400px;
+				height: 200px;
+				color: #8b8b8b;
+				overflow-x: auto;
+			"
+		></div>
+		<h2>显示拓扑</h2>
+		<div
+			id="topo"
+			style="
+				background-color: #efefef;
+				width: 200px;
+				height: 80px;
+				color: #8b8b8b;
+				overflow-x: auto;
+				margin: 10px 0;
+			"
+		></div>
+		<button id="btn2">查询拓扑</button>
+		<h2>添加和显示拓扑</h2>
+		<button id="btn4">显示拓扑</button>
+		<div
+			id="topoInfo"
+			style="
+				background-color: #efefef;
+				width: 600px;
+				height: 300px;
+				color: #8b8b8b;
+				overflow-x: auto;
+			"
+		></div>
+		<script>
+			const baseUrl = "http://127.0.0.1:3000",
+				flows = [
+					{
+						dpid: 1,
+						priority: 1,
+						match: {
+							in_port: 1,
+						},
+						actions: [
+							{
+								type: "PUSH_VLAN",
+								ethertype: 33024,
+							},
+							{
+								type: "SET_FIELD",
+								field: "vlan_vid",
+								value: 4096,
+							},
+							{
+								type: "OUTPUT",
+								port: 3,
+							},
+						],
+					},
+					{
+						dpid: 1,
+						priority: 1,
+						match: {
+							in_port: 2,
+						},
+						actions: [
+							{
+								type: "PUSH_VLAN",
+								ethertype: 33024,
+							},
+							{
+								type: "SET_FIELD",
+								field: "vlan_vid",
+								value: 4097,
+							},
+							{
+								type: "OUTPUT",
+								port: 3,
+							},
+						],
+					},
+					{
+						dpid: 1,
+						priority: 1,
+						match: {
+							vlan_vid: 0,
+						},
+						actions: [
+							{
+								type: "POP_VLAN",
+								ethertype: 33024,
+							},
+							{
+								type: "OUTPUT",
+								port: 1,
+							},
+						],
+					},
+					{
+						dpid: 1,
+						priority: 1,
+						match: {
+							vlan_vid: 1,
+						},
+						actions: [
+							{
+								type: "POP_VLAN",
+								ethertype: 33024,
+							},
+							{
+								type: "OUTPUT",
+								port: 2,
+							},
+						],
+					},
+					{
+						dpid: 2,
+						priority: 1,
+						match: {
+							in_port: 1,
+						},
+						actions: [
+							{
+								type: "PUSH_VLAN",
+								ethertype: 33024,
+							},
+							{
+								type: "SET_FIELD",
+								field: "vlan_vid",
+								value: 4096,
+							},
+							{
+								type: "OUTPUT",
+								port: 3,
+							},
+						],
+					},
+					{
+						dpid: 2,
+						priority: 1,
+						match: {
+							in_port: 2,
+						},
+						actions: [
+							{
+								type: "PUSH_VLAN",
+								ethertype: 33024,
+							},
+							{
+								type: "SET_FIELD",
+								field: "vlan_vid",
+								value: 4097,
+							},
+							{
+								type: "OUTPUT",
+								port: 3,
+							},
+						],
+					},
+					{
+						dpid: 2,
+						priority: 1,
+						match: {
+							vlan_vid: 0,
+						},
+						actions: [
+							{
+								type: "POP_VLAN",
+								ethertype: 33024,
+							},
+							{
+								type: "OUTPUT",
+								port: 1,
+							},
+						],
+					},
+					{
+						dpid: 2,
+						priority: 1,
+						match: {
+							vlan_vid: 1,
+						},
+						actions: [
+							{
+								type: "POP_VLAN",
+								ethertype: 33024,
+							},
+							{
+								type: "OUTPUT",
+								port: 2,
+							},
+						],
+					},
+				];
+			(btn1 = document.getElementById("btn1")),
+				(btn0 = document.getElementById("btn0")),
+				(btn2 = document.getElementById("btn2")),
+				(btn3 = document.getElementById("btn3")),
+				(btn4 = document.getElementById("btn4")),
+				(queryFlows = async () => {
+					await fetch(baseUrl + "/stats/flow/1", {
+						method: "GET",
+					})
+						.then((res) => res.json())
+						.then((data) => {
+							const cont = document.getElementById("flowContent"),
+								num = document.getElementById("num");
+							cont.textContent = JSON.stringify(data["1"], null, "\n");
+							num.textContent = `s1当前流表数:${data["1"].length}`;
+						});
+				});
+
+			btn0.addEventListener("click", queryFlows);
+
+			btn1.addEventListener("click", async () => {
+				let textarea = document.getElementById("flowAdd");
+				const content = textarea.value;
+				await fetch(baseUrl + "/stats/flowentry/add", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: content,
+				});
+				await new Promise((resolve) => setTimeout(resolve, 1000));
+				await queryFlows();
+			});
+
+			btn2.addEventListener("click", async () => {
+				await fetch(baseUrl + "/v1.0/topology/switches", {
+					method: "GET",
+				})
+					.then((res) => res.json())
+					.then((data) => {
+						document.getElementById("topo").innerHTML = data[0]["ports"].reduce(
+							(pre, cur) =>
+								pre +
+								`s${data[0]["dpid"][data[0]["dpid"].length - 1]} -> h${
+									cur["name"][cur["name"].length - 1]
+								}<br>`,
+							""
+						);
+					});
+			});
+
+			btn3.addEventListener("click", async () => {
+				await fetch(baseUrl + "/stats/flowentry/clear/1", {
+					method: "DELETE",
+				});
+				queryFlows();
+			});
+
+			btn4.addEventListener("click", async () => {
+				await Promise.all(
+					flows.map(async (v, i) => {
+						await fetch(baseUrl + "/stats/flowentry/add", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify(v),
+						});
+					})
+				);
+				await new Promise((resolve) => setTimeout(resolve, 500));
+				let topo = "",
+					switches = [];
+				await fetch(baseUrl + "/v1.0/topology/switches", {
+					method: "GET",
+				})
+					.then((res) => res.json())
+					.then((data) => {
+						topo = data.reduce((preItm, curItm) => {
+							switches.push(curItm["dpid"][curItm["dpid"].length - 1]);
+							let c = curItm["ports"].reduce(
+								(pre, cur) =>
+									pre +
+									`s${curItm["dpid"][curItm["dpid"].length - 1]} -> h${
+										cur["name"][cur["name"].length - 1]
+									}<br>`,
+								""
+							);
+							return preItm + c;
+						}, "");
+					});
+
+				topo += "s1 -> s2<br>";
+				switches.forEach(async (v, i, arr) => {
+					await fetch(baseUrl + "/stats/flow/" + (i + 1))
+						.then((res) => res.json())
+						.then((data) => {
+							let idx = i + 1 + "";
+							// topo += JSON.stringify(data[idx], null, "\n");
+							topo += data[idx].reduce(
+								(pre, cur) => pre + JSON.stringify(cur),
+								"<br>"
+							);
+							console.log(JSON.stringify(data[idx][0]));
+						});
+					if (arr.length - 1 == i)
+						document.getElementById("topoInfo").innerHTML = topo;
+					else topo += "<br>";
+				});
+			});
+		</script>
+	</body>
+</html>
